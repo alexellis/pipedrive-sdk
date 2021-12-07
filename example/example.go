@@ -9,6 +9,15 @@ import (
 	pipedrivesdk "github.com/alexellis/pipedrive-sdk"
 )
 
+// This example imports a contact into Pipedrive from a 
+// number of command line arguments
+//
+// To add a "Person", you must first create or find the Person's 
+// Organization.
+// Then you add the Organization ID to the Person's creation
+// requestion
+// You should also search for the person to find out whether 
+// they already exist in Pipedrive.
 func main() {
 	if len(os.Args) != 4 {
 		panic("Give org name email as arguments")
