@@ -116,7 +116,7 @@ func (p *PipeDriveClient) CreatePerson(name, email string, orgID int) (CreatePer
 	return r, err
 }
 
-func (p *PipeDriveClient) SearchPerson(term string) (SearchPersonResponse, error) {
+func (p *PipeDriveClient) SearchPersonByEmail(term string) (SearchPersonResponse, error) {
 	r := SearchPersonResponse{}
 	u, err := url.Parse("https://" + p.Organization + ".pipedrive.com/v1/persons/search")
 	if err != nil {
@@ -124,8 +124,10 @@ func (p *PipeDriveClient) SearchPerson(term string) (SearchPersonResponse, error
 	}
 	q := url.Values{
 		"term":      []string{term},
+		"fields":    []string{"email"},
 		"api_token": []string{p.APIKey},
 	}
+
 	u.RawQuery = q.Encode()
 
 	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
@@ -181,6 +183,98 @@ func (p *PipeDriveClient) SearchOrg(term string) (SearchResponse, error) {
 		defer res.Body.Close()
 	}
 	body, _ := ioutil.ReadAll(res.Body)
+
+	err = json.Unmarshal(body, &r)
+	return r, err
+}
+
+func (p *PipeDriveClient) CreateDeal(title string, orgID, personID int) (DealResponse, error) {
+	r := DealResponse{}
+	u, err := url.Parse("https://" + p.Organization + ".pipedrive.com/v1/deals")
+	if err != nil {
+		return r, err
+	}
+
+	q := url.Values{
+		"api_token": []string{p.APIKey},
+	}
+	u.RawQuery = q.Encode()
+
+	f := struct {
+		Title    string `json:"title"`
+		PersonID int    `json:"person_id"`
+		OrgID    int    `json:"org_id"`
+	}{
+		Title:    title,
+		PersonID: personID,
+		OrgID:    orgID,
+	}
+
+	out, _ := json.Marshal(f)
+	req, err := http.NewRequest(http.MethodPost, u.String(), bytes.NewReader(out))
+	if err != nil {
+		return r, err
+	}
+
+	req.Header.Add("Content-Type", "application/json")
+
+	res, err := p.Client.Do(req)
+	if err != nil {
+		return r, err
+	}
+	if res.Body != nil {
+		defer res.Body.Close()
+	}
+	body, _ := ioutil.ReadAll(res.Body)
+
+	if res.StatusCode != http.StatusCreated {
+		return r, fmt.Errorf("createDeal status: %d, body: %s", res.StatusCode, string(body))
+	}
+
+	err = json.Unmarshal(body, &r)
+	return r, err
+}
+
+func (p *PipeDriveClient) CreateDealNote(content string, dealID int) (CreateDealNoteResponse, error) {
+	r := CreateDealNoteResponse{}
+	u, err := url.Parse("https://" + p.Organization + ".pipedrive.com/v1/notes")
+	if err != nil {
+		return r, err
+	}
+
+	q := url.Values{
+		"api_token": []string{p.APIKey},
+	}
+	u.RawQuery = q.Encode()
+
+	f := struct {
+		Content string `json:"content"`
+		DealID  int    `json:"deal_id"`
+	}{
+		Content: content,
+		DealID:  dealID,
+	}
+
+	out, _ := json.Marshal(f)
+	req, err := http.NewRequest(http.MethodPost, u.String(), bytes.NewReader(out))
+	if err != nil {
+		return r, err
+	}
+
+	req.Header.Add("Content-Type", "application/json")
+
+	res, err := p.Client.Do(req)
+	if err != nil {
+		return r, err
+	}
+	if res.Body != nil {
+		defer res.Body.Close()
+	}
+	body, _ := ioutil.ReadAll(res.Body)
+
+	if res.StatusCode != http.StatusCreated {
+		return r, fmt.Errorf("createNote status: %d, body: %s", res.StatusCode, string(body))
+	}
 
 	err = json.Unmarshal(body, &r)
 	return r, err
